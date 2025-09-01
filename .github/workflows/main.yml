@@ -1,0 +1,22 @@
+name: 部署网站
+
+# 触发条件：推送到main分支时
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # 1. 下载代码
+    - name: 检出代码
+      uses: actions/checkout@v3
+      
+    # 2. 部署到GitHub Pages
+    - name: 部署到GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./
