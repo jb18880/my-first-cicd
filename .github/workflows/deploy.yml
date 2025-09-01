@@ -19,7 +19,18 @@ jobs:
     - name: 检出代码
       uses: actions/checkout@v4
     
-
+    - name: 🔍 检查必要文件
+      run: |
+        echo "检查网站文件是否完整..."
+        files=("index.html" "style.css" "script.js")
+        for file in "${files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file 存在"
+          else
+            echo "❌ $file 缺失"
+            exit 1
+          fi
+        done
     
     - name: 🧪 HTML语法检查
       run: |
