@@ -1,53 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>我的CI/CD项目</title>
+    <title>我的第一个CI/CD项目</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <!-- 环境横幅 -->
-        <div id="env-banner" style="display: none; background: #ff9800; color: white; padding: 10px; text-align: center; font-weight: bold;"></div>
-        
-        <h1>欢迎来到我的网站！</h1>
+        <h1>欢迎来到我的网站！我是阿宝哇！目前Acitons已经被开启，真的启动了！</h1>
         <p id="time">加载时间...</p>
         <button onclick="updateTime()">更新时间</button>
-        
-        <!-- 显示环境信息 -->
-        <div class="env-info">
-            <p><strong>环境:</strong> <span id="environment">加载中...</span></p>
-            <p><strong>版本:</strong> <span id="version">加载中...</span></p>
-            <p><strong>API地址:</strong> <span id="api-url">加载中...</span></p>
-        </div>
+        <p>版本: v1.0</p>
     </div>
-
-    <!-- 默认加载生产配置 -->
-    <script src="config/prod.js"></script>
     <script src="script.js"></script>
-    <script>
-        // 页面加载时显示配置信息
-        document.addEventListener('DOMContentLoaded', function() {
-            // 设置环境信息
-            document.getElementById('environment').textContent = config.environment;
-            document.getElementById('version').textContent = config.version;
-            document.getElementById('api-url').textContent = config.apiUrl;
-            
-            // 设置背景色
-            document.body.style.backgroundColor = config.backgroundColor;
-            
-            // 显示环境横幅（如果有）
-            if (config.banner) {
-                const banner = document.getElementById('env-banner');
-                banner.textContent = config.banner;
-                banner.style.display = 'block';
-            }
-            
-            // 开发模式下显示调试信息
-            if (config.debugMode) {
-                console.log('🔧 调试模式已开启');
-                console.log('配置信息:', config);
-            }
-        });
-    </script>
 </body>
 </html>
