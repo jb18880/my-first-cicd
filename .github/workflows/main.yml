@@ -1,8 +1,8 @@
-name: 多环境CI/CD流水线
+name: 测试并部署网站
 
 on:
   push:
-    branches: [ main, develop ]  # 两个分支都触发
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -12,12 +12,12 @@ permissions:
   id-token: write
 
 jobs:
-  # 测试任务（所有分支都运行）
+  # 测试任务
   test:
     runs-on: ubuntu-latest
     steps:
     - name: 检出代码
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     - name: 🔍 检查必要文件
       run: |
@@ -35,6 +35,7 @@ jobs:
     - name: 🧪 HTML语法检查
       run: |
         echo "检查HTML基本语法..."
+        # 检查HTML标签是否配对
         if grep -q "<html>" index.html && grep -q "</html>" index.html; then
           echo "✅ HTML标签检查通过"
         else
@@ -42,6 +43,7 @@ jobs:
           exit 1
         fi
         
+        # 检查是否有标题
         if grep -q "<title>" index.html; then
           echo "✅ 页面标题存在"
         else
@@ -49,73 +51,27 @@ jobs:
           exit 1
         fi
     
-    - name: 🔧 检查配置文件
+    - name: 📊 代码统计
       run: |
-        echo "检查环境配置文件..."
-        if [ -f "config/prod.js" ] && [ -f "config/dev.js" ]; then
-          echo "✅ 环境配置文件完整"
+        echo "📈 代码统计信息："
+        echo "HTML文件行数: $(wc -l < index.html)"
+        echo "CSS文件行数: $(wc -l < style.css)" 
+        echo "JS文件行数: $(wc -l < script.js)"
+    
+    - name: 🎯 运行自定义测试
+      run: |
+        if [ -f "tests/test.js" ]; then
+          echo "运行自定义测试..."
+          node tests/test.js
         else
-          echo "❌ 缺少环境配置文件"
-          exit 1
+          echo "没有找到自定义测试，跳过"
         fi
-    
-    - name: 📊 分支信息
-      run: |
-        echo "🌿 当前分支: ${GITHUB_REF#refs/heads/}"
-        echo "💻 触发事件: ${{ github.event_name }}"
-        echo "👤 提交者: ${{ github.actor }}"
 
-  # 开发环境部署
-  deploy-dev:
-    needs: test
+  # 部署任务（只有测试通过才执行）
+  deploy:
+    needs: test  # 关键：只有test任务成功才运行deploy
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-    
-    environment:
-      name: development
-      url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}-dev
-    
-    steps:
-    - name: 检出代码
-      uses: actions/checkout@v3
-      
-    - name: 🔧 使用开发环境配置
-      run: |
-        echo "配置开发环境..."
-        # 使用开发配置替换生产配置
-        cp config/dev.js config/current-config.js
-        
-        # 修改HTML引用开发配置
-        sed -i 's|config/prod.js|config/current-config.js|g' index.html
-        
-        echo "✅ 开发环境配置完成"
-      
-    - name: 🚧 添加开发环境标识
-      run: |
-        echo "添加开发环境特殊标识..."
-        # 在title后添加开发标识
-        sed -i 's|<title>\(.*\)</title>|<title>[DEV] \1</title>|g' index.html
-        echo "✅ 开发环境标识添加完成"
-    
-    - name: 📝 显示开发环境信息
-      run: |
-        echo "🔍 开发环境部署信息:"
-        echo "- 分支: develop"
-        echo "- 环境: Development" 
-        echo "- 配置: 使用开发配置文件"
-        echo "- 特性: 调试模式开启，显示环境横幅"
-    
-    - name: 🚀 模拟部署到开发环境
-      run: |
-        echo "🚧 正在部署到开发环境..."
-        echo "✅ 开发环境部署完成！"
-        echo "🌐 开发环境地址: https://dev.yoursite.com (模拟)"
-
-  # 生产环境部署
-  deploy-prod:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main'
     
     environment:
       name: github-pages
@@ -123,55 +79,21 @@ jobs:
     
     steps:
     - name: 检出代码
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       
-    - name: ⚙️ 使用生产环境配置
-      run: |
-        echo "配置生产环境..."
-        # 生产环境已经默认使用prod.js，无需修改
-        echo "✅ 生产环境配置确认"
-      
-    - name: 🏭 生产环境优化
-      run: |
-        echo "执行生产环境优化..."
-        # 这里可以添加代码压缩、图片优化等
-        echo "✅ 生产环境优化完成"
-    
-    - name: 📝 显示生产环境信息
-      run: |
-        echo "🔍 生产环境部署信息:"
-        echo "- 分支: main"
-        echo "- 环境: Production"
-        echo "- 配置: 使用生产配置文件"
-        echo "- 特性: 无调试信息，优化性能"
-    
     - name: 配置GitHub Pages
-      uses: actions/configure-pages@v3
+      uses: actions/configure-pages@v5
       
     - name: 上传文件
-      uses: actions/upload-pages-artifact@v2
+      uses: actions/upload-pages-artifact@v3
       with:
         path: ./
         
-    - name: 🚀 部署到生产环境
+    - name: 🚀 部署到GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@v2
+      uses: actions/deploy-pages@v4
       
-    - name: 🎉 生产部署成功通知
+    - name: 🎉 部署成功通知
       run: |
-        echo "✅ 生产环境部署成功！"
-        echo "🌐 生产环境地址: ${{ steps.deployment.outputs.page_url }}"
-        echo "🎯 版本: v1.2"
-
-  # 仅PR时运行的检查
-  pr-check:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-    - name: PR信息检查
-      run: |
-        echo "📋 Pull Request 信息:"
-        echo "- 源分支: ${{ github.head_ref }}"  
-        echo "- 目标分支: ${{ github.base_ref }}"
-        echo "- 标题: ${{ github.event.pull_request.title }}"
-        echo "✅ PR检查完成，可以合并"
+        echo "✅ 网站部署成功！"
+        echo "🌐 访问地址: ${{ steps.deployment.outputs.page_url }}"

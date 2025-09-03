@@ -11,24 +11,3 @@ button {
     font-size: 16px;
     margin: 10px;
 }
-.env-info {
-    background: #f5f5f5;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 15px;
-    margin-top: 20px;
-    font-family: monospace;
-}
-
-.env-info p {
-    margin: 5px 0;
-}
-
-.env-info strong {
-    color: #333;
-}
-
-/* 开发环境特殊样式 */
-body[data-env="development"] {
-    border: 3px dashed #ff9800;
-}
