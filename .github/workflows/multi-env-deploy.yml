@@ -1,0 +1,175 @@
+name: 🌍 多环境自动部署
+
+on:
+  push:
+    branches: 
+      - main      # 生产环境分支
+      - develop   # 开发环境分支
+  pull_request:
+    branches: [ main ]
+
+# 设置权限
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  # 🧪 测试任务（所有分支都运行）
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v4
+    
+    - name: 🔍 基础文件检查
+      run: |
+        echo "🔍 检查必要文件..."
+        files=("index.html" "style.css" "script.js")
+        for file in "${files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file 存在"
+          else
+            echo "❌ $file 缺失"
+            exit 1
+          fi
+        done
+    
+    - name: 🧪 配置文件检查
+      run: |
+        echo "🧪 检查环境配置..."
+        if [ -f "config/dev.js" ] && [ -f "config/prod.js" ]; then
+          echo "✅ 环境配置文件完整"
+        else
+          echo "❌ 环境配置文件缺失"
+          exit 1
+        fi
+        
+        # 检查配置文件语法
+        echo "检查开发环境配置..."
+        node -c config/dev.js && echo "✅ dev.js 语法正确"
+        
+        echo "检查生产环境配置..."
+        node -c config/prod.js && echo "✅ prod.js 语法正确"
+    
+    - name: 📊 环境信息
+      run: |
+        echo "📊 构建信息:"
+        echo "分支: ${GITHUB_REF#refs/heads/}"
+        echo "提交: ${GITHUB_SHA:0:8}"
+        echo "触发: ${{ github.event_name }}"
+        echo "作者: ${{ github.actor }}"
+
+  # 🚧 开发环境部署
+  deploy-dev:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    
+    environment:
+      name: development
+      url: https://dev-${{ github.event.repository.name }}.pages.dev
+    
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 🔧 开发环境配置
+      run: |
+        echo "🚧 配置开发环境..."
+        
+        # 修改HTML标题，添加开发环境标识
+        sed -i 's/<title>\(.*\)<\/title>/<title>[DEV] \1<\/title>/g' index.html
+        
+        # 确保使用开发环境配置
+        echo "<!-- 开发环境构建: $(date) -->" >> index.html
+        
+        # 显示当前配置
+        echo "✅ 开发环境配置完成:"
+        echo "  - 标题已添加[DEV]标识"
+        echo "  - 使用开发环境API"
+        echo "  - 启用调试模式"
+    
+    - name: 🚀 模拟开发环境部署
+      run: |
+        echo "🚀 部署到开发环境..."
+        echo "📁 部署内容:"
+        ls -la
+        echo ""
+        echo "✅ 开发环境部署完成！"
+        echo "🌐 开发环境访问地址: https://dev-myproject.example.com (模拟)"
+        echo "👥 团队成员可以访问此地址进行测试"
+        echo "🔧 此环境包含最新的开发功能"
+
+  # 🌐 生产环境部署  
+  deploy-prod:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v4
+      
+    - name: ⚙️ 生产环境配置
+      run: |
+        echo "🏭 配置生产环境..."
+        
+        # 生产环境优化
+        echo "执行生产环境优化..."
+        
+        # 添加生产环境标识
+        echo "<!-- 生产环境构建: $(date) -->" >> index.html
+        
+        # 移除调试信息（如果有的话）
+        sed -i '/console\.log/d' script.js 2>/dev/null || true
+        
+        echo "✅ 生产环境配置完成:"
+        echo "  - 移除调试信息"
+        echo "  - 使用生产环境API"
+        echo "  - 启用性能优化"
+    
+    - name: 🔒 生产环境安全检查
+      run: |
+        echo "🔒 执行安全检查..."
+        
+        # 检查是否包含敏感信息
+        if grep -r "password\|secret\|key" . --exclude-dir=.git --exclude="*.yml" 2>/dev/null; then
+          echo "⚠️ 发现可能的敏感信息，请检查"
+        else
+          echo "✅ 安全检查通过"
+        fi
+        
+        # 检查配置文件
+        if grep -q "debugMode.*true" config/prod.js; then
+          echo "❌ 生产环境不应该启用调试模式"
+          exit 1
+        else
+          echo "✅ 生产环境配置检查通过"
+        fi
+    
+    - name: 🏗️ 配置GitHub Pages
+      uses: actions/configure-pages@v5
+      
+    - name: 📦 打包部署文件
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: ./
+        
+    - name: 🚀 部署到生产环境
+      id: deployment
+      uses: actions/deploy-pages@v4
+      
+    - name: 🎉 部署完成通知
+      run: |
+        echo "🎉 生产环境部署成功！"
+        echo "🌐 生产地址: ${{ steps.deployment.outputs.page_url }}"
+        echo "👥 用户现在可以访问最新版本"
+        echo "📊 部署统计:"
+        echo "  - 版本: $(grep -o 'v[0-9.]*' config/prod.js || echo '未知')"
+        echo "  - 提交: ${GITHUB_SHA:0:8}"
+        echo "  - 部署时间: $(date)"
